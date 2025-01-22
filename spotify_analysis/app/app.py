@@ -1,3 +1,4 @@
+import datetime
 
 import streamlit as st
 
@@ -40,6 +41,12 @@ def main():
         stream_history = get_data()
     sha = StreamingHistoryAnalyser(stream_history)
     
+    current_year: int = datetime.datetime.now().year-1
+    if current_year in sha.years:
+        default_year = current_year
+    else:
+        default_year = sha.max_year
+    
     with st.sidebar:
         filter_by_year = st.checkbox(
             label="Filter by year",
@@ -50,9 +57,9 @@ def main():
         if filter_by_year:
             year_selection = st.slider(
                 label="Year range",
-                min_value=2015,
-                max_value=2024,
-                value=2025,
+                min_value=sha.min_year,
+                max_value=default_year,
+                value=sha.max_year,
             )
         else:
             year_selection = None
@@ -73,7 +80,7 @@ def main():
     
     year_plays_df = sha.get_cleaned_data(year=year_selection)
     
-    if len(year_plays_df) == 0:
+    if not (year_selection in sha.years):
         st.warning(
             f"No data available for the selected year ({year_selection}). "
             "Please select another year or upload a different Spotify data file."
