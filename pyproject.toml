@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "spotify_analysis"
+version = "0.1.0"
+dependencies = [
+    "altair==5.5.0",
+    "ipython",
+    "narwhals==1.15.1",
+    "nbformat==5.10.4",
+    "plotly==5.24.1",
+    "polars==1.19.0",
+    "setuptools==75.1.0",
+    "statsmodels==0.14.4",
+    "streamlit==1.41.1",
+    "vegafusion==2.0.1",
+    "vl-convert-python==1.7.0"
+]
