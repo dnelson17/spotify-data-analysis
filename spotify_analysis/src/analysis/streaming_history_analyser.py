@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import Tuple
 import datetime
+import calendar
 
 import polars as pl
 import altair as alt
@@ -36,11 +37,56 @@ class StreamingHistoryAnalyser:
         else:
             return self.cleaned_data
     
-    def get_total_time_played(self, year: int = None) -> float:
+    def get_total_mins_played(self, year: int = None) -> float:
         return self.get_cleaned_data(year)["mins_played"].sum()
+    
+    def get_total_hours_played(self, year: int = None) -> float:
+        return self.get_total_mins_played(year) / 60
+    
+    def get_total_days_played(self, year: int = None) -> int:
+        return self.get_total_hours_played(year) / 24
     
     def get_total_tracks_played(self, year: int = None) -> int:
         return self.get_cleaned_data(year).shape[0]
+    
+    def get_total_days_played(self, year: int = None) -> int:
+        return (len(self.get_cleaned_data(year)["ts"].dt.date().unique()))
+    
+    def get_total_days_covered(self, year: int = None) -> int:
+        if year is None:
+            min_date = self.get_cleaned_data(None)["ts"].dt.date().min()
+            max_date = self.get_cleaned_data(None)["ts"].dt.date().max()
+            return (max_date - min_date).days + 1
+        else:
+            return 365 + calendar.isleap(year)
+    
+    def get_avg_time_played_per_day(self, year: int = None) -> float:
+        return self.get_total_mins_played(year) / self.get_total_days_covered(year)
+    
+    def get_avg_time_played_per_track(self, year: int = None) -> float:
+        return self.get_total_mins_played(year) / self.get_total_tracks_played(year)
+    
+    def get_avg_tracks_played_per_day(self, year: int = None) -> float:
+        return self.get_total_tracks_played(year) / self.get_total_days_covered(year)
+    
+    def get_num_unique_songs(self, year: int = None) -> int:
+        return (
+            self.get_cleaned_data(year)
+            .group_by(["master_metadata_album_artist_name", "master_metadata_track_name"])
+            .agg(pl.count("master_metadata_track_name").alias("num_plays"))
+            .shape[0]
+        )
+    
+    def get_num_unique_artists(self, year: int = None) -> int:
+        return self.get_cleaned_data(year)["master_metadata_album_artist_name"].n_unique()
+    
+    def get_num_unique_albums(self, year: int = None) -> int:
+        return (
+            self.get_cleaned_data(year)
+            .group_by(["master_metadata_album_artist_name", "master_metadata_album_album_name"])
+            .agg(pl.count("master_metadata_album_album_name").alias("num_plays"))
+            .shape[0]
+        )
     
     def get_daily_play_counts(self, year: int = None) -> pl.DataFrame:
         return (
