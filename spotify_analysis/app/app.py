@@ -38,7 +38,7 @@ def main():
     st.title("Spotify Data Analysis")
     with st.sidebar:
         stream_history = get_data()
-    stream_history_analyser = StreamingHistoryAnalyser(stream_history)
+    sha = StreamingHistoryAnalyser(stream_history)
     
     with st.sidebar:
         filter_by_year = st.checkbox(
@@ -71,7 +71,7 @@ def main():
         "Hyperfixation songs",
     ])
     
-    year_plays_df = stream_history_analyser.get_cleaned_data(year=year_selection)
+    year_plays_df = sha.get_cleaned_data(year=year_selection)
     
     if len(year_plays_df) == 0:
         st.warning(
@@ -84,14 +84,14 @@ def main():
         st.write(year_plays_df)
     with daily_play_counts_tab:
         st.plotly_chart(
-            stream_history_analyser.get_daily_mins_played_chart(
+            sha.get_daily_mins_played_chart(
                 year=year_selection,
             ),
         )
     with top_artists_tab:
         num_artists = st.slider("Number of artists", 1, 200, 20)
         st.altair_chart(
-            stream_history_analyser.get_top_artists_bar_chart(
+            sha.get_top_artists_bar_chart(
                 year=year_selection,
                 num_artists=num_artists,
             ),
@@ -107,7 +107,7 @@ def main():
             key="num_top_songs",
         )
         st.altair_chart(
-            stream_history_analyser.get_top_songs_cumulative_plays_chart(
+            sha.get_top_songs_cumulative_plays_chart(
                 year=year_selection,
                 num_songs=num_songs,
             ),
@@ -115,7 +115,7 @@ def main():
         )
     with hyperfixation_songs_tab:
         n_days: int = st.slider("Number of days", 1, 31, 7)
-        hyperfixation_songs = stream_history_analyser.get_hyperfixation_songs(
+        hyperfixation_songs = sha.get_hyperfixation_songs(
             year=year_selection,
             n_days=n_days,
         )
