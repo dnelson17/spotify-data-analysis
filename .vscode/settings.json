@@ -1,0 +1,7 @@
+{
+    "python.testing.pytestArgs": [
+        "spotify_analysis"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
