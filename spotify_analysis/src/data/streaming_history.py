@@ -17,7 +17,10 @@ class StreamingHistory:
         dfs: List[pl.DataFrame] = []
         with zipfile.ZipFile(self._zip_path, 'r') as zip_ref:
             for file_name in zip_ref.namelist():
-                if file_name.startswith("Spotify Extended Streaming History/Streaming_History_Audio_") and file_name.endswith(".json"):
+                if (
+                    file_name.startswith("Spotify Extended Streaming History/Streaming_History_Audio_")
+                    and file_name.endswith(".json")
+                ):
                     with zip_ref.open(file_name) as file:
                         df = pl.read_json(file, schema=streaming_history_audio_schema)
                         dfs.append(df)
