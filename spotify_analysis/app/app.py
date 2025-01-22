@@ -36,7 +36,8 @@ def get_data() -> StreamingHistory:
 
 def main():
     st.title("Spotify Data Analysis")
-    stream_history = get_data()
+    with st.sidebar:
+        stream_history = get_data()
     stream_history_analyser = StreamingHistoryAnalyser(stream_history)
     
     with st.sidebar:
