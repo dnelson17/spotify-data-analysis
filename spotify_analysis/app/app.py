@@ -65,13 +65,15 @@ def main():
             year_selection = None
     
     (
-        data_tab,
+        summary_stats_tab,
+        raw_data_tab,
         daily_play_counts_tab,
         top_artists_tab,
         top_all_time_songs_tab,
         hyperfixation_songs_tab,
     ) = st.tabs([
-        "Data",
+        "Summary Statistics",
+        "Raw Data",
         "Daily Play Counts",
         "Top artists",
         "Top all time songs",
@@ -80,14 +82,43 @@ def main():
     
     year_plays_df = sha.get_cleaned_data(year=year_selection)
     
-    if not (year_selection in sha.years):
+    if (year_selection is not None) and (year_selection not in sha.years):
         st.warning(
             f"No data available for the selected year ({year_selection}). "
             "Please select another year or upload a different Spotify data file."
         )
         st.stop()
     
-    with data_tab:
+    with summary_stats_tab:
+        cols = st.columns(3)
+        with cols[0]:
+            st.metric(
+                label="Total play count",
+                value=f"{sha.get_total_tracks_played(year_selection):,.0f}",
+            )
+            st.metric(
+                label="Avg play count per day",
+                value=f"{sha.get_avg_tracks_played_per_day(year_selection):,.0f}",
+            )
+        with cols[1]:
+            st.metric(
+                label="Total mins played",
+                value=f"{sha.get_total_mins_played(year_selection):,.0f}",
+            )
+            st.metric(
+                label="Total days played",
+                value=f"{sha.get_total_days_played(year_selection):,.0f}",
+            )
+        with cols[2]:
+            st.metric(
+                label="Total unique songs",
+                value=f"{sha.get_num_unique_songs(year_selection):,.0f}",
+            )
+            st.metric(
+                label="Total unique artists",
+                value=f"{sha.get_num_unique_artists(year_selection):,.0f}",
+            )
+    with raw_data_tab:
         st.write(year_plays_df)
     with daily_play_counts_tab:
         st.plotly_chart(
