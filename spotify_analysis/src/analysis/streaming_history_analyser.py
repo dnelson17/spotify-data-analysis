@@ -166,7 +166,7 @@ class StreamingHistoryAnalyser:
                 tooltip=[
                     alt.Tooltip("master_metadata_album_artist_name:N", title="Artist"),
                     alt.Tooltip("total_mins_played:Q", title="Total Minutes Played", format=",.1f"),
-                    alt.Tooltip("num_plays:Q", title="Number of Plays"),
+                    alt.Tooltip("num_plays:Q", title="Number of Plays", format=",.0f"),
                 ]
             )
             .properties(
