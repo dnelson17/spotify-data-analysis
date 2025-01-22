@@ -1,4 +1,6 @@
 
+from __future__ import annotations
+from typing import Tuple
 import datetime
 
 import polars as pl
@@ -20,6 +22,9 @@ class StreamingHistoryAnalyser:
     def __init__(self, SteamHistory: StreamingHistory):
         self._stream_history = SteamHistory
         self.cleaned_data: pl.DataFrame = SteamHistory.cleaned_data
+        self.years = (self.cleaned_data["ts"].dt.year().unique().to_list())
+        self.min_year: int = min(self.years)
+        self.max_year: int = max(self.years)
     
     def get_cleaned_data(self, year: int) -> pl.DataFrame:
         if isinstance(year, int):
