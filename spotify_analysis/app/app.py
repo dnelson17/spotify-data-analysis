@@ -10,7 +10,10 @@ from spotify_analysis.src.data.streaming_history import (
 
 spotify_download_link = "https://www.spotify.com/account/privacy/"
 
-def read_stream_history(zip_path: st.runtime.uploaded_file_manager.UploadedFile) -> StreamingHistory:
+@st.cache_data
+def read_stream_history(
+    zip_path: st.runtime.uploaded_file_manager.UploadedFile,
+) -> StreamingHistory:
     return StreamingHistory(zip_path).read_data().clean_data()
 
 def get_data() -> StreamingHistory:
@@ -31,10 +34,8 @@ def get_data() -> StreamingHistory:
     
     return read_stream_history(zip_file_upload)
 
-
 def main():
     st.title("Spotify Data Analysis")
-    
     stream_history = get_data()
     stream_history_analyser = StreamingHistoryAnalyser(stream_history)
     
