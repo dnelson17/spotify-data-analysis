@@ -37,6 +37,7 @@ class StreamingHistory:
     def clean_data(self) -> StreamingHistory:
         self._cleaned_data: pl.DataFrame = (
             self._raw_data
+            .filter(pl.col("spotify_track_uri").is_not_null())
             .with_columns(
                 pl.when((~pl.col("offline")) | (pl.col("offline_timestamp") == 1))
                 .then(pl.col("ts"))
@@ -47,24 +48,30 @@ class StreamingHistory:
             )
             .select(
                 [
+                    pl.col("ts").dt.date().alias("date"),
                     pl.col("ts"),
-                    pl.col("mins_played"),
-                    pl.col("master_metadata_track_name"),
+                    pl.col("spotify_track_uri"),
                     pl.col("master_metadata_album_artist_name"),
                     pl.col("master_metadata_album_album_name"),
+                    pl.col("master_metadata_track_name"),
+                    pl.col("mins_played"),
                     pl.col("reason_start"),
                     pl.col("reason_end"),
                     pl.col("shuffle"),
                     pl.col("skipped"),
-                    ~pl.col("skipped").fill_null(False).alias("played"),
+                    (
+                        (pl.col("mins_played") > 1)
+                        | (
+                            (pl.col("mins_played") > 0.2)
+                            & (pl.col("reason_end") == "trackdone")
+                        )
+                    ).alias("played"),
                     pl.col("offline"),
                     pl.col("incognito_mode"),
                     pl.col("platform"),
                 ],
             )
-            .filter(
-                (pl.col("mins_played") > 1) | pl.col("played")
-            )
+            .filter(pl.col("played"))
             .drop_nulls(
                 subset=[
                     "ts",
