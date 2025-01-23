@@ -71,10 +71,7 @@ class StreamingHistoryAnalyser:
     
     def get_num_unique_songs(self, year: int = None) -> int:
         return (
-            self.get_cleaned_data(year)
-            .group_by(["master_metadata_album_artist_name", "master_metadata_track_name"])
-            .agg(pl.count("master_metadata_track_name").alias("num_plays"))
-            .shape[0]
+            self.get_cleaned_data(year).select("spotify_track_uri").n_unique()
         )
     
     def get_num_unique_artists(self, year: int = None) -> int:
@@ -139,19 +136,16 @@ class StreamingHistoryAnalyser:
             .select([
                 pl.col("ts").dt.date().alias("date"),
                 pl.col("mins_played"),
+                pl.col("spotify_track_uri"),
                 pl.col("master_metadata_track_name"),
-                pl.col("master_metadata_album_artist_name")
+                pl.col("master_metadata_album_artist_name"),
             ])
-            .group_by(
-                [
-                    "date",
-                    "master_metadata_album_artist_name",
-                    "master_metadata_track_name",
-                ]
-            )
+            .group_by(["date","spotify_track_uri"])
             .agg(
                 pl.col("mins_played").sum().alias("total_mins_played"),
-                pl.len().alias("num_plays"),
+                pl.len().alias("total_num_plays"),
+                pl.col("master_metadata_album_artist_name").first().alias("master_metadata_album_artist_name"),
+                pl.col("master_metadata_track_name").first().alias("master_metadata_track_name"),
             )
             .sort(
                 by=[
@@ -164,16 +158,13 @@ class StreamingHistoryAnalyser:
     
     def get_song_total_plays(self, year: int = None) -> pl.DataFrame:
         return (
-            self.get_daily_song_play_counts(year)
-            .group_by(
-                [
-                    "master_metadata_album_artist_name",
-                    "master_metadata_track_name",
-                ]
-            )
+            self.get_cleaned_data(year)
+            .group_by("spotify_track_uri")
             .agg(
-                pl.col("total_mins_played").sum().alias("total_mins_played"),
-                pl.col("num_plays").sum().alias("total_num_plays"),
+                pl.col("mins_played").sum().alias("total_mins_played"),
+                pl.len().alias("total_num_plays"),
+                pl.col("master_metadata_album_artist_name").first().alias("master_metadata_album_artist_name"),
+                pl.col("master_metadata_track_name").first().alias("master_metadata_track_name"),
             )
             .sort("total_num_plays", descending=True)
             # .drop_nulls()
