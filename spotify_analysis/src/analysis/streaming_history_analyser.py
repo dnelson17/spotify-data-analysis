@@ -50,7 +50,7 @@ class StreamingHistoryAnalyser:
         return self.get_cleaned_data(year).shape[0]
     
     def get_total_days_played(self, year: int = None) -> int:
-        return (len(self.get_cleaned_data(year)["ts"].dt.date().unique()))
+        return len(self.get_cleaned_data(year)["ts"].dt.date().unique())
     
     def get_total_days_covered(self, year: int = None) -> int:
         if year is None:
