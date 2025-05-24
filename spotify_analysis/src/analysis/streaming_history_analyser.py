@@ -1,14 +1,15 @@
-
 from __future__ import annotations
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
 import datetime
 import calendar
 
 import polars as pl
 import altair as alt
 alt.data_transformers.enable("vegafusion")
-import plotly
 import plotly.express as px
+
+if TYPE_CHECKING:
+    import plotly.graph_objects as go
 
 from spotify_analysis.src.data.streaming_history import StreamingHistory
 
@@ -131,8 +132,31 @@ class StreamingHistoryAnalyser:
         )
     
     def get_daily_song_play_counts(self, year: int = None) -> pl.DataFrame:
+        """
+        Aggregates song play counts and total minutes played on a daily basis.
+
+        This method first retrieves cleaned listening data, then groups it by
+        date and track URI to calculate total plays and listening duration
+        for each song per day.
+
+        Args:
+            year (int, optional): The year to filter the listening data for.
+                                  If None, data for all available years is processed.
+                                  The `get_cleaned_data` method is expected to handle
+                                  this year-based filtering.
+
+        Returns:
+            pl.DataFrame: A Polars DataFrame with the following schema:
+                - 'date' (pl.Date): The date of the song plays.
+                - 'spotify_track_uri' (pl.Utf8): The unique Spotify URI for the track.
+                - 'total_mins_played' (pl.Float64): Total minutes the track was played on that date.
+                - 'total_num_plays' (pl.UInt32): Total number of times the track was played on that date.
+                - 'master_metadata_album_artist_name' (pl.Utf8): The name of the album artist for the track.
+                - 'master_metadata_track_name' (pl.Utf8): The name of the track.
+        """
         return (
             self.get_cleaned_data(year)
+            .lazy()
             .select([
                 pl.col("ts").dt.date().alias("date"),
                 pl.col("mins_played"),
@@ -154,6 +178,7 @@ class StreamingHistoryAnalyser:
                     "master_metadata_track_name",
                 ]
             )
+            .collect()
         )
     
     def get_song_total_plays(self, year: int = None) -> pl.DataFrame:
@@ -167,10 +192,9 @@ class StreamingHistoryAnalyser:
                 pl.col("master_metadata_track_name").first().alias("master_metadata_track_name"),
             )
             .sort("total_num_plays", descending=True)
-            # .drop_nulls()
         )
     
-    def get_daily_mins_played_chart(self, year: int = None) -> plotly.graph_objects.Figure:
+    def get_daily_mins_played_chart(self, year: int = None) -> go.Figure:
         return (
             px.scatter(
                 self.get_daily_play_counts(year),
@@ -222,10 +246,22 @@ class StreamingHistoryAnalyser:
         year: int = None,
         num_songs: int = None,
     ) -> alt.Chart:
+        """Creates a chart showing cumulative plays over time for top songs.
+
+        Args:
+            year (int, optional): The year to filter the data for. If None, uses all data.
+            num_songs (int, optional): Number of top songs to include in the chart.
+
+        Returns:
+            alt.Chart: An Altair chart showing cumulative plays over time for the top songs.
+        """
         song_total_plays = (
             self.get_daily_song_play_counts(year)
             .group_by("master_metadata_album_artist_name", "master_metadata_track_name")
-            .agg(pl.col("total_mins_played").sum().alias("total_mins_played"), pl.col("num_plays").sum().alias("total_num_plays"))
+            .agg(
+                pl.col("total_mins_played").sum(),
+                pl.col("total_num_plays").sum(),
+            )
             .sort("total_num_plays", descending=True)
             # .drop_nulls()
         )
@@ -242,7 +278,7 @@ class StreamingHistoryAnalyser:
             )
             .with_columns(
                 cumsum_total_mins_played=pl.col("total_mins_played").cum_sum().over(["master_metadata_album_artist_name","master_metadata_track_name"]),
-                cumsum_num_plays=pl.col("num_plays").cum_sum().over(["master_metadata_album_artist_name","master_metadata_track_name"]),
+                cumsum_num_plays=pl.col("total_num_plays").cum_sum().over(["master_metadata_album_artist_name","master_metadata_track_name"]),
                 song_name=pl.col("master_metadata_album_artist_name") + " - " + pl.col("master_metadata_track_name"),
             )
         )
@@ -280,6 +316,25 @@ class StreamingHistoryAnalyser:
         )
     
     def get_hyperfixation_songs(self, year: int = None, n_days: int = 7) -> pl.DataFrame:
+        """
+        Identifies songs that were played intensively over a rolling window period.
+
+        This method uses the daily song play counts to calculate rolling sums over a specified
+        number of days, identifying periods of intensive listening for each song.
+
+        Args:
+            year (int, optional): The year to filter the listening data for.
+                                If None, data for all available years is processed.
+            n_days (int, optional): The number of days to use as the rolling window.
+                                  Defaults to 7 days.
+
+        Returns:
+            pl.DataFrame: A Polars DataFrame with the following schema:
+                - 'master_metadata_album_artist_name' (pl.Utf8): The name of the album artist
+                - 'master_metadata_track_name' (pl.Utf8): The name of the track
+                - 'max_cumsum_total_mins_played' (pl.Float64): Maximum total minutes played in any n_days window
+                - 'max_cumsum_num_plays' (pl.UInt32): Maximum number of plays in any n_days window
+        """
         return (
             self.get_daily_song_play_counts(year)
             .with_columns(
@@ -289,7 +344,7 @@ class StreamingHistoryAnalyser:
                     .over(["master_metadata_album_artist_name","master_metadata_track_name"])
                 ),
                 cumsum_num_plays=(
-                    pl.col("num_plays")
+                    pl.col("total_num_plays")
                     .rolling_sum_by("date", window_size=datetime.timedelta(days=n_days))
                     .over(["master_metadata_album_artist_name","master_metadata_track_name"])
                 ),
@@ -302,5 +357,4 @@ class StreamingHistoryAnalyser:
             .filter(pl.col("max_cumsum_num_plays") > 2)
             .filter(pl.col("max_cumsum_total_mins_played") > 0)
             .sort("max_cumsum_total_mins_played", descending=True)
-            # .drop_nulls()
         )
